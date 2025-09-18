@@ -1,0 +1,9 @@
+# Bibliotecas para o Frontend
+streamlit
+pandas
+requests
+
+# Bibliotecas para o Backend
+fastapi
+uvicorn[standard]
+scikit-learn
