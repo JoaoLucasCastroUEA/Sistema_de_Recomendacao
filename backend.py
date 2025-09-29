@@ -15,7 +15,6 @@ for g_list in movies_df['genres'].str.split('|'):
     all_genres.update(g_list)
 all_genres = sorted(all_genres)
 
-# Criar matriz binária filme x gênero
 def encode_genres(genres):
     vec = [1 if g in genres.split('|') else 0 for g in all_genres]
     return vec
@@ -56,26 +55,48 @@ def avaliar():
 
     db = load_data()
     if usuario_id not in db:
-        db[usuario_id] = {}
-    db[usuario_id][str(filme_id)] = nota
+        db[usuario_id] = {"avaliacoes": {}, "feedback": {}}
+    if "avaliacoes" not in db[usuario_id]:
+        db[usuario_id]["avaliacoes"] = {}
+    db[usuario_id]["avaliacoes"][str(filme_id)] = nota
     save_data(db)
 
     return jsonify({"message": f"Avaliação salva: {filme_id} -> {nota}"})
 
+@app.route("/feedback", methods=["POST"])
+def feedback():
+    data = request.json
+    usuario_id = data.get("usuario_id")
+    filme_id = data.get("movieId")
+    liked = data.get("liked")  # True ou False
+
+    if not usuario_id or not filme_id or liked is None:
+        return jsonify({"error": "Dados incompletos"}), 400
+
+    db = load_data()
+    if usuario_id not in db:
+        db[usuario_id] = {"avaliacoes": {}, "feedback": {}}
+    if "feedback" not in db[usuario_id]:
+        db[usuario_id]["feedback"] = {}
+
+    db[usuario_id]["feedback"][str(filme_id)] = liked
+    save_data(db)
+
+    return jsonify({"message": f"Feedback salvo: {filme_id} -> {'Like' if liked else 'Dislike'}"})
+
+@app.route("/feedback", methods=["GET"])
 
 @app.route("/recomendacoes/<usuario_id>", methods=["GET"])
 def recomendacoes(usuario_id):
     db = load_data()
-    avaliacoes = db.get(usuario_id, {})
+    avaliacoes = db.get(usuario_id, {}).get("avaliacoes", {})
 
     if not avaliacoes:
         return jsonify({"error": "Usuário não possui avaliações"}), 400
 
-    # Filmes avaliados
     avaliados_ids = [int(fid) for fid in avaliacoes.keys()]
     avaliados_notas = avaliacoes
 
-    # Calcula score para cada filme não avaliado
     scores = {}
     for filme_id, nota in avaliados_notas.items():
         idx_filme = movies_df.index[movies_df["movieId"] == int(filme_id)][0]
@@ -87,10 +108,9 @@ def recomendacoes(usuario_id):
                 continue
             scores[candidato_id] = scores.get(candidato_id, 0) + sim * nota
 
-    # Ordena por score
     recomendados_ids = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:5]
-
     recomendados = movies_df[movies_df["movieId"].isin([fid for fid, _ in recomendados_ids])]
+
     return jsonify(recomendados[["movieId", "title", "genres"]].to_dict(orient="records"))
 
 if __name__ == "__main__":
