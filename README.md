@@ -27,13 +27,7 @@ Siga as instruções abaixo para configurar e executar o projeto em sua máquina
 
 ### Instalação
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
-    cd seu-repositorio
-    ```
-
-2.  **Instale as dependências do back-end:**
+1.  **Instale as dependências do back-end:**
     Crie e ative um ambiente virtual (recomendado):
     ```bash
     # Para macOS/Linux
@@ -49,7 +43,7 @@ Siga as instruções abaixo para configurar e executar o projeto em sua máquina
     pip install -r requirements.txt
     ```
 
-3.  **Instale as dependências do front-end:**
+2.  **Instale as dependências do front-end:**
     Navegue até a pasta do front-end e instale os pacotes:
     ```bash
     cd frontend
