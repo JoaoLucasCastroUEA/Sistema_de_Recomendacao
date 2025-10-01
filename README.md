@@ -54,7 +54,7 @@ Siga as instruções abaixo para configurar e executar o projeto em sua máquina
     ```bash
     streamlit run frontend.py
     ```
-    A aplicação estará acessível em `http://localhost:3000`.
+    A aplicação estará acessível em `http://localhost:8501`.
 
 ## 📊 O Conjunto de Dados
 
