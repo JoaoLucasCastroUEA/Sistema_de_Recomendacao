@@ -84,12 +84,25 @@ def feedback():
 
     return jsonify({"message": f"Feedback salvo: {filme_id} -> {'Like' if liked else 'Dislike'}"})
 
-@app.route("/feedback", methods=["GET"])
+
+@app.route("/feedback/<usuario_id>", methods=["GET"])
+def get_feedback(usuario_id):
+    """Retorna todos os feedbacks de um usuário"""
+    db = load_data()
+    user_data = db.get(usuario_id, {})
+    feedbacks = user_data.get("feedback", {})
+
+    return jsonify({
+        "usuario_id": usuario_id,
+        "feedbacks": feedbacks,
+        "total_feedbacks": len(feedbacks)
+    })
 
 @app.route("/recomendacoes/<usuario_id>", methods=["GET"])
 def recomendacoes(usuario_id):
     db = load_data()
     avaliacoes = db.get(usuario_id, {}).get("avaliacoes", {})
+    feedbacks = db.get(usuario_id, {}).get("feedback", {})
 
     if not avaliacoes:
         return jsonify({"error": "Usuário não possui avaliações"}), 400
@@ -104,7 +117,8 @@ def recomendacoes(usuario_id):
 
         for idx, sim in similares:
             candidato_id = int(movies_df.iloc[idx]["movieId"])
-            if str(candidato_id) in avaliacoes:  # já avaliado
+            # Pular se já foi avaliado OU se já recebeu feedback
+            if str(candidato_id) in avaliacoes or str(candidato_id) in feedbacks:
                 continue
             scores[candidato_id] = scores.get(candidato_id, 0) + sim * nota
 
