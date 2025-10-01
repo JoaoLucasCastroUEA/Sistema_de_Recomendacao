@@ -43,13 +43,6 @@ Siga as instruções abaixo para configurar e executar o projeto em sua máquina
     pip install -r requirements.txt
     ```
 
-2.  **Instale as dependências do front-end:**
-    Navegue até a pasta do front-end e instale os pacotes:
-    ```bash
-    cd frontend
-    npm install
-    ```
-
 ### Executando a Aplicação
 
 1.  **Inicie o back-end:**
