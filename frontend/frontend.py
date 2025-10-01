@@ -33,6 +33,17 @@ if 'recomendacoes_atuais' not in st.session_state:
     st.session_state.recomendacoes_atuais = []
 if 'historico_recomendacoes' not in st.session_state:
     st.session_state.historico_recomendacoes = []
+if 'current_user_id' not in st.session_state:
+    st.session_state.current_user_id = ""
+
+
+def limpar_dados_usuario():
+    """Limpa todos os dados do usuário atual"""
+    st.session_state.avaliacoes_usuario = {}
+    st.session_state.feedback = {}
+    st.session_state.feedback_pendentes = {}
+    st.session_state.recomendacoes_atuais = []
+    st.session_state.historico_recomendacoes = []
 
 
 def main():
@@ -52,6 +63,10 @@ def main():
                      type='primary' if st.session_state.current_page == "feedback" else 'secondary'):
             navigate_to("feedback")
 
+        if st.button("Similaridade entre Usuários", use_container_width=True,
+                     type='primary' if st.session_state.current_page == "similaridade" else 'secondary'):
+            navigate_to("similaridade")
+
     if st.session_state.current_page == "home":
         st.title("🎬 Sistema de Recomendação de Filmes")
         st.markdown("Avalie filmes e receba recomendações personalizadas.")
@@ -65,7 +80,20 @@ def main():
 
         with col1:
             st.header("1. Avalie os Filmes")
-            usuario_id = st.text_input("Digite seu ID de Usuário:", "HokageDaParaiba69")
+
+            # Input do user ID com callback para limpar dados quando mudar
+            usuario_id = st.text_input(
+                "Digite seu ID de Usuário:",
+                "HokageDaParaiba69",
+                key="user_id_input"
+            )
+
+            # Verificar se o user ID mudou
+            if usuario_id != st.session_state.current_user_id:
+                st.session_state.current_user_id = usuario_id
+                limpar_dados_usuario()
+                st.rerun()
+
             st.markdown("---")
 
             filmes_disponiveis = catalogo_df[~catalogo_df['Nome'].isin(st.session_state.avaliacoes_usuario.keys())]
@@ -102,6 +130,10 @@ def main():
 
         with col2:
             st.header("Gere suas Recomendações")
+
+            # Mostrar user ID atual para referência
+            if st.session_state.current_user_id:
+                st.caption(f"👤 Usuário atual: **{st.session_state.current_user_id}**")
 
             if st.button("Obter Novas Recomendações", type="primary"):
                 if not usuario_id:
@@ -204,8 +236,17 @@ def main():
     if st.session_state.current_page == "feedback":
         st.header("Acurácia do sistema de recomendação")
 
-        usuario_id = st.text_input("Digite seu ID de Usuário para ver feedbacks:", "HokageDaParaiba69",
-                                   key="feedback_user_id")
+        usuario_id = st.text_input(
+            "Digite seu ID de Usuário para ver feedbacks:",
+            st.session_state.current_user_id if st.session_state.current_user_id else "HokageDaParaiba69",
+            key="feedback_user_id"
+        )
+
+        # Verificar se o user ID mudou na página de feedback também
+        if usuario_id != st.session_state.current_user_id:
+            st.session_state.current_user_id = usuario_id
+            limpar_dados_usuario()
+            st.rerun()
 
         if st.button("Carregar Estatísticas"):
             res = requests.get(f"{API_URL}/feedback/{usuario_id}")
@@ -310,6 +351,108 @@ def main():
             else:
                 st.error("Erro ao carregar feedbacks do servidor.")
 
+    if st.session_state.current_page == "similaridade":
+        st.title("👥 Análise de Similaridade entre Usuários")
+        st.markdown("Descubra quais usuários têm gostos similares aos seus baseado em **gêneros de filmes**!")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.header("1. Selecione o Usuário")
+
+            # Carregar lista de usuários
+            try:
+                res_usuarios = requests.get(f"{API_URL}/usuarios")
+                if res_usuarios.status_code == 200:
+                    usuarios_data = res_usuarios.json()
+                    lista_usuarios = usuarios_data.get("usuarios", [])
+
+                    if lista_usuarios:
+                        usuario_alvo = st.selectbox(
+                            "Selecione um usuário para análise:",
+                            options=lista_usuarios,
+                            index=lista_usuarios.index(
+                                st.session_state.current_user_id) if st.session_state.current_user_id in lista_usuarios else 0
+                        )
+
+                        if st.button("🔍 Analisar Similaridades por Gênero", type="primary"):
+                            with st.spinner('Calculando similaridades por gênero...'):
+                                res_similaridade = requests.get(f"{API_URL}/similaridade/{usuario_alvo}")
+                                if res_similaridade.status_code == 200:
+                                    similaridade_data = res_similaridade.json()
+                                    st.session_state.similaridade_resultados = similaridade_data
+                                else:
+                                    st.error("Erro ao calcular similaridades")
+                    else:
+                        st.warning("Nenhum usuário encontrado no sistema")
+                else:
+                    st.error("Erro ao carregar lista de usuários")
+            except Exception as e:
+                st.error(f"Erro de conexão: {e}")
+
+        with col2:
+            st.header("2. Perfil do Usuário")
+
+            if 'similaridade_resultados' in st.session_state:
+                resultados = st.session_state.similaridade_resultados
+
+                # Mostrar perfil de gêneros do usuário
+                st.success(f"**Usuário analisado:** {resultados['usuario_alvo']}")
+                st.info(f"**Total de usuários comparados:** {resultados['total_usuarios_comparados']}")
+
+                # Gêneros preferidos
+                st.subheader("🎭 Gêneros Preferidos")
+                generos_preferidos = resultados.get('generos_preferidos_usuario', [])
+                notas_genero = resultados.get('notas_por_genero', {})
+
+                for genero in generos_preferidos:
+                    nota = notas_genero.get(genero, 0)
+                    st.write(f"**{genero}**: ⭐ {nota}/5")
+
+        # Seção de usuários similares
+        if 'similaridade_resultados' in st.session_state:
+            st.header("🎯 Usuários Mais Similares por Gênero")
+
+            resultados = st.session_state.similaridade_resultados
+
+            for i, similar in enumerate(resultados['similaridades']):
+                # Calcular porcentagem de similaridade
+                percent_similar = similar['similaridade'] * 100
+
+                # Definir cor baseada na similaridade
+                if percent_similar >= 80:
+                    cor = "🟢"
+                    nivel = "Muito Similar"
+                elif percent_similar >= 60:
+                    cor = "🟡"
+                    nivel = "Similar"
+                elif percent_similar >= 40:
+                    cor = "🟠"
+                    nivel = "Moderadamente Similar"
+                else:
+                    cor = "🔴"
+                    nivel = "Pouco Similar"
+
+                with st.container():
+                    colA, colB, colC = st.columns([2, 2, 2])
+                    with colA:
+                        st.write(f"**{i + 1}. {similar['usuario_id']}**")
+                        st.caption(f"{nivel}")
+                    with colB:
+                        st.write(f"{cor} **{percent_similar:.1f}%** similar")
+                        st.caption(f"🎭 {similar['generos_comuns']} gêneros em comum")
+                    with colC:
+                        st.write(f"🎬 {similar['filmes_comuns']} filmes em comum")
+                        st.caption(f"📊 {similar['total_avaliacoes']} avaliações")
+
+                    # Mostrar gêneros preferidos do usuário similar
+                    if similar.get('generos_preferidos'):
+                        st.caption(f"**Gêneros preferidos:** {', '.join(similar['generos_preferidos'])}")
+
+                    # Barra de progresso visual
+                    st.progress(similar['similaridade'])
+
+                    st.markdown("---")
 
 if __name__ == "__main__":
     main()
