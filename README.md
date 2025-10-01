@@ -53,17 +53,13 @@ Siga as instruções abaixo para configurar e executar o projeto em sua máquina
 ### Executando a Aplicação
 
 1.  **Inicie o back-end:**
-    A partir da pasta raiz do projeto, execute:
-    ```bash
-    # Certifique-se que seu ambiente virtual está ativado
-    python app.py 
-    ```
+    A partir da pasta raiz do projeto, execute o backend.py
     O servidor back-end estará em execução em `http://localhost:5000`.
 
 2.  **Inicie o front-end:**
     Em um **novo terminal**, a partir da pasta `frontend`, execute:
     ```bash
-    npm start
+    streamlit run frontend.py
     ```
     A aplicação estará acessível em `http://localhost:3000`.
 
